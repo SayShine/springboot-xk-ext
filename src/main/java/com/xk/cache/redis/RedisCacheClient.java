@@ -46,9 +46,9 @@ public class RedisCacheClient implements CacheClient {
         // 缓存未命中
         if (value == null) {
             value = cacheLoader.load();
-            if (isCacheNull) {
-                setWithNull(key, value, exp, timeUnit);
-            } else if (value != null) {
+            if (isCacheNull && value==null) {
+                set(key, Null.NULL, exp, timeUnit);
+            } else{
                 set(key, value, exp, timeUnit);
             }
         }
@@ -58,13 +58,6 @@ public class RedisCacheClient implements CacheClient {
             value = null;
         }
         return value;
-    }
-
-    private void setWithNull(String key, Object value, int exp, TimeUnit timeUnit) {
-        if (value == null) {
-            value = Null.NULL;
-        }
-        set(key, value, exp, timeUnit);
     }
 
     @Override
