@@ -1,14 +1,15 @@
 package com.xk.queue.impl;
 
-import com.xk.queue.DelayJob;
 import com.xk.queue.DelayQueueService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Resource;
 import java.util.concurrent.DelayQueue;
+import java.util.concurrent.Delayed;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -36,7 +37,7 @@ public class DelayQueueServiceImpl implements DelayQueueService {
     @Resource
     private ExecutorService delayExecutorService;
 
-    private DelayQueue<DelayJob> delayQueue = new DelayQueue<>();
+    private final DelayQueue<DelayJob> delayQueue = new DelayQueue<>();
 
     @Override
     public boolean add(@Nonnull Runnable runnable, long delayTime, @Nonnull TimeUnit timeUnit) {
@@ -84,5 +85,40 @@ public class DelayQueueServiceImpl implements DelayQueueService {
                 }
             }while (!Thread.currentThread().isInterrupted());
         });
+    }
+
+    static class DelayJob implements Delayed {
+
+        /**
+         * 任务
+         */
+        private final Runnable runnable;
+
+        /**
+         * 实际执行时间
+         */
+        private final long executeTime;
+
+        public DelayJob(@Nonnull Runnable runnable, long delayTime, @Nonnull TimeUnit timeUnit) {
+            Assert.notNull(runnable, "runnable can not be null!");
+            Assert.notNull(timeUnit, "timeunit can not be null!");
+            this.runnable = runnable;
+            this.executeTime = System.currentTimeMillis() + TimeUnit.MILLISECONDS.convert(delayTime, timeUnit);
+        }
+
+        @Override
+        public long getDelay(@Nonnull TimeUnit unit) {
+            return unit.convert(executeTime - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
+        }
+
+        @Override
+        public int compareTo(@Nonnull Delayed delayed) {
+            DelayJob delayJob = (DelayJob) delayed;
+            return (int) (this.executeTime - delayJob.executeTime);
+        }
+
+        public Runnable getRunnable(){
+            return this.runnable;
+        }
     }
 }
